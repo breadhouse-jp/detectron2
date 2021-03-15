@@ -449,10 +449,7 @@ class DefaultTrainer(TrainerBase):
         It now calls :func:`detectron2.modeling.build_model`.
         Overwrite it if you'd like a different model.
         """
-        model = build_model(cfg)
-        logger = logging.getLogger(__name__)
-        logger.info("Model:\n{}".format(model))
-        return model
+        return build_model(cfg)
 
     @classmethod
     def build_optimizer(cls, cfg, model):
