@@ -25,6 +25,56 @@ class CfgNode(_CfgNode):
     def _open_cfg(cls, filename):
         return PathManager.open(filename, "r")
 
+    @classmethod
+    def load_yaml_with_base(
+        cls, filename: str, allow_unsafe: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Just like `yaml.load(open(filename))`, but inherit attributes from its
+            `_BASE_`.
+        Args:
+            filename (str or file-like object): the file name or file of the current config.
+                Will be used to find the base config file.
+            allow_unsafe (bool): whether to allow loading the config file with
+                `yaml.unsafe_load`.
+        Returns:
+            (dict): the loaded yaml
+        """
+        with cls._open_cfg(filename) as f:
+            try:
+                cfg = yaml.safe_load(f)
+            except yaml.constructor.ConstructorError:
+                if not allow_unsafe:
+                    raise
+                f.close()
+                with cls._open_cfg(filename) as f:
+                    cfg = yaml.unsafe_load(f)
+
+        def merge_a_into_b(a: Dict[str, Any], b: Dict[str, Any]) -> None:
+            # merge dict a into dict b. values in a will overwrite b.
+            for k, v in a.items():
+                if isinstance(v, dict) and k in b:
+                    assert isinstance(
+                        b[k], dict
+                    ), "Cannot inherit key '{}' from base!".format(k)
+                    merge_a_into_b(v, b[k])
+                else:
+                    b[k] = v
+
+        if BASE_KEY in cfg:
+            base_cfg_file = cfg[BASE_KEY]
+            if base_cfg_file.startswith("~"):
+                base_cfg_file = os.path.expanduser(base_cfg_file)
+            if not any(map(base_cfg_file.startswith, ["/", "https://", "http://"])):
+                # the path to base cfg is relative to the config file itself.
+                base_cfg_file = os.path.join(os.path.dirname(filename), base_cfg_file)
+            base_cfg = cls.load_yaml_with_base(base_cfg_file, allow_unsafe=allow_unsafe)
+            del cfg[BASE_KEY]
+
+            merge_a_into_b(cfg, base_cfg)
+            return base_cfg
+        return cfg
+
     # Note that the default value of allow_unsafe is changed to True
     def merge_from_file(self, cfg_filename: str, allow_unsafe: bool = True) -> None:
         assert PathManager.isfile(cfg_filename), f"Config file '{cfg_filename}' does not exist!"
