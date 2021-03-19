@@ -5,8 +5,12 @@ import functools
 import inspect
 import logging
 from fvcore.common.config import CfgNode as _CfgNode
+import os, yaml
 
 from detectron2.utils.file_io import PathManager
+
+
+BASE_KEY = "_BASE_"
 
 
 class CfgNode(_CfgNode):
@@ -26,9 +30,7 @@ class CfgNode(_CfgNode):
         return PathManager.open(filename, "r")
 
     @classmethod
-    def load_yaml_with_base(
-        cls, filename: str, allow_unsafe: bool = False
-    ) -> Dict[str, Any]:
+    def load_yaml_with_base(cls, filename, allow_unsafe):
         """
         Just like `yaml.load(open(filename))`, but inherit attributes from its
             `_BASE_`.
@@ -50,7 +52,7 @@ class CfgNode(_CfgNode):
                 with cls._open_cfg(filename) as f:
                     cfg = yaml.unsafe_load(f)
 
-        def merge_a_into_b(a: Dict[str, Any], b: Dict[str, Any]) -> None:
+        def merge_a_into_b(a, b):
             # merge dict a into dict b. values in a will overwrite b.
             for k, v in a.items():
                 if isinstance(v, dict) and k in b:
