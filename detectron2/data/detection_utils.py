@@ -73,7 +73,7 @@ def convert_PIL_to_numpy(image, format):
         if format in ["BGR", "YUV-BT.601"]:
             conversion_format = "RGB"
         image = image.convert(conversion_format)
-    image = np.asarray(image)
+    image = np.array(image)
     # PIL squeezes out the channel dimension for "L", so make it HWC
     if format == "L":
         image = np.expand_dims(image, -1)
