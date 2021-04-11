@@ -27,7 +27,12 @@ def batched_nms(
     # Investigate after having a fully-cuda NMS op.
     if len(boxes) < 40000:
         # fp16 does not have enough range for batched NMS
-        return box_ops.batched_nms(boxes.float(), scores, idxs, iou_threshold)
+        boxes = boxes.float()
+        if boxes.numel() == 0:
+            return torch.empty((0,), dtype=torch.int64, device=boxes.device)
+        else:
+            keep = box_ops.nms(boxes, scores, iou_threshold)
+            return keep
 
     result_mask = scores.new_zeros(scores.size(), dtype=torch.bool)
     for id in torch.jit.annotate(List[int], torch.unique(idxs).cpu().tolist()):
